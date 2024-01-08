@@ -1,0 +1,45 @@
+default_language_version:
+  python: python3.11
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: end-of-file-fixer
+        exclude: ^(.*.xlsx|.+.xls|.*.csv|.*.json|.*.pkl)
+      - id: trailing-whitespace
+        exclude: ^data/
+      - id: check-yaml
+      - id: check-docstring-first
+      - id: check-added-large-files
+        name: Check for added large files
+        description: Prevent giant files from being committed
+        entry: check-added-large-files
+        language: python
+        args: ["--maxkb=350", "--enforce-all"]
+        exclude: ^poetry.lock
+      - id: detect-private-key
+
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--filter-files"]
+        name: Format imports
+
+  - repo: https://github.com/psf/black
+    rev: 23.7.0
+    hooks:
+      - id: black
+        name: Format code
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.0.278
+    hooks:
+      - id: ruff
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.4.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [pydantic]
