@@ -8,8 +8,8 @@ packages = [{include = "PlayingPong"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-gymnasium = "^0.29.1"
 jupyter = "^1.0.0"
+gymnasium = {extras = ["accept-rom-license", "atari"], version = "^0.29.1"}
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.1.11"
