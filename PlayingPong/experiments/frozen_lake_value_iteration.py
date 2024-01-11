@@ -16,7 +16,7 @@ class Agent:
             ENV_NAME,
             desc=None,
             map_name="8x8",
-            is_slippery=False,
+            is_slippery=True,
             render_mode="rgb_array",
         )
         self.state, _ = self.env.reset()
@@ -90,7 +90,7 @@ if __name__ == "__main__":
         "FrozenLake-v1",
         desc=None,
         map_name="8x8",
-        is_slippery=False,
+        is_slippery=True,
         render_mode="rgb_array",
     )
     agent = Agent()
@@ -112,20 +112,20 @@ if __name__ == "__main__":
         if reward > best_reward:
             print(f"Best Reward updated {best_reward} -> {reward}")
             best_reward = reward
-        if reward > 0.95:
+        if reward > 0.8:
             print(f"Solved in {iter_no} iterations!")
             break
 
     # Record Final try
     agent.play_episode(test_env, record=True)
 
-    # print("Reward Table")
-    # print(agent.reward)
+    print("Reward Table")
+    print(agent.reward)
 
-    # print("Q(s,a) Table")
-    # print(agent.values)
+    print("Q(s,a) Table")
+    print(agent.values)
 
-    # print("Transition Table")
-    # print(agent.transitions)
+    print("Transition Table")
+    print(agent.transitions)
 
     writer.close()
