@@ -122,7 +122,7 @@ if __name__ == "__main__":
     print("Reward Table")
     print(agent.reward)
 
-    print("Q(s,a) Table")
+    print("V(s) Table")
     print(agent.values)
 
     print("Transition Table")
