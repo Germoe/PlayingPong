@@ -4,6 +4,7 @@ import gymnasium as gym
 from torch.utils.tensorboard import SummaryWriter
 
 ENV_NAME = "FrozenLake-v1"
+MAP_NAME = "4x4"
 
 GAMMA = 0.9
 TEST_EPISODES = 20
@@ -15,7 +16,7 @@ class Agent:
         self.env = gym.make(
             ENV_NAME,
             desc=None,
-            map_name="8x8",
+            map_name=MAP_NAME,
             is_slippery=True,
             render_mode="rgb_array",
         )
@@ -87,9 +88,9 @@ class Agent:
 
 if __name__ == "__main__":
     test_env = gym.make(
-        "FrozenLake-v1",
+        ENV_NAME,
         desc=None,
-        map_name="8x8",
+        map_name=MAP_NAME,
         is_slippery=True,
         render_mode="rgb_array",
     )

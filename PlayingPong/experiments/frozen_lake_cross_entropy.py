@@ -9,6 +9,8 @@ import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 
 LOG_AT_ITER = 100
+ENV_NAME = "FrozenLake-v1"
+MAP_NAME = "4x4"
 
 GAMMA = 0.95
 HIDDEN_SIZE = 128
@@ -106,9 +108,9 @@ def filter_batches(
 
 if __name__ == "__main__":
     env = gym.make(
-        "FrozenLake-v1",
+        ENV_NAME,
         desc=None,
-        map_name="4x4",
+        map_name=MAP_NAME,
         is_slippery=True,
         render_mode="rgb_array",
     )
