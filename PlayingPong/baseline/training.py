@@ -32,6 +32,15 @@ Experience = namedtuple(
 
 
 class ExperienceBuffer:
+    """
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.149`
+    """
+
     def __init__(self, capacity, observation_shape, device="cpu"):
         if device == "cpu":
             self.buffer = deque(maxlen=capacity)
@@ -119,6 +128,15 @@ class ExperienceBuffer:
 
 
 class Agent:
+    """
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.149`
+    """
+
     def __init__(self, env, exp_buffer):
         self.env = env
         self.exp_buffer = exp_buffer
@@ -184,6 +202,13 @@ def calc_loss(batch, net, tgt_net, device="cpu") -> torch.Tensor:
 
     Returns:
     The loss for the batch of experiences.
+
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.149`
     """
     states, actions, rewards, terminated, truncated, new_states = batch
     states_v = states  # copy=False to avoid unnecessary copy operation
@@ -217,6 +242,15 @@ def calc_loss(batch, net, tgt_net, device="cpu") -> torch.Tensor:
 
 
 if __name__ == "__main__":
+    """
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.153-155`
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--cuda",
@@ -256,20 +290,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     device = torch.device("cuda" if args.cuda else "cpu")
     print("Using device: ", device)
-
-    # test_env = pong_env.make_env(args.env)
-    # test_env = wrappers.RecordVideo(
-    #     test_env,
-    #     "./videos/{}".format(
-    #         args.env.replace("/", "_")
-    #         + "_"
-    #         + str(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
-    #     ),
-    #     episode_trigger=lambda x: True,
-    #     disable_logger=True,
-    # )  # Standard Wrapper to record videos of episodes
-    # test_buffer = ExperienceBuffer(REPLAY_SIZE)
-    # test_agent = Agent(test_env, test_buffer)
 
     env = pong_env.make_env(args.env, args.record, args.record_at_iter)
     net = DQN(env.observation_space.shape, env.action_space.n).to(device)
@@ -333,19 +353,6 @@ if __name__ == "__main__":
             if best_m_reward > MEAN_REWARD_BOUND:
                 print(f"Solved in {frame_idx} frames!")
                 break
-
-        # if (
-        #     len(total_rewards) % args.record_at_iter == 0
-        #     and len(total_rewards) != last_recorded_iter
-        # ):
-        #     print(f"\nRecording Video at {frame_idx} frames!")
-        #     while True:
-        #         reward = test_agent.play_step(net, epsilon=0, device=device)
-        #         if reward is not None:
-        #             print(f"Test Reward: {reward}")
-        #             writer.add_scalar("test_reward", reward, frame_idx)
-        #             break
-        #     last_recorded_iter = len(total_rewards)
 
         if len(buffer) < REPLAY_SIZE:
             continue

@@ -2,6 +2,14 @@ import torch.nn as nn
 
 
 class DQN(nn.Module):
+    """
+    Code adjusted from the DQN model in the book:
+        `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+        Apply Modern RL Methods to Practical Problems of Chatbots,
+        Robotics, Discrete Optimization, Web Automation, and More.
+        Packt Publishing Ltd. p.145-146`
+    """
+
     def __init__(self, input_shape, out_channels):
         super().__init__()
         if input_shape[1] != input_shape[2]:

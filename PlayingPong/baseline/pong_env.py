@@ -23,7 +23,11 @@ class PreProcessingImage84(gym.ObservationWrapper):
     observation_space: The observation space of the gym environment.
 
     Reference:
-    - TODO: Add Paper and Hands-On Book
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.143-144`
 
     Note:
     - Manual Implementation some methods in this Wrapper Class `AtariPreprocessing`:
@@ -68,6 +72,12 @@ class ActionRepeated(gym.Wrapper):
     the loop breaks and the method returns the observation, total reward,
     termination status, truncation status, and info.
 
+    Reference:
+        `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+        Apply Modern RL Methods to Practical Problems of Chatbots,
+        Robotics, Discrete Optimization, Web Automation, and More.
+        Packt Publishing Ltd. p.145-146`
+
     Attributes:
     env: The gym environment to be wrapped.
     repeat: The number of times an action is repeated.
@@ -95,6 +105,13 @@ class ImageToCWH(gym.ObservationWrapper):
     Attributes:
     env: The gym environment to be wrapped.
     observation_space: The observation space of the gym environment.
+
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.144`
     """
 
     def __init__(self, env):
@@ -120,6 +137,13 @@ class Buffer(gym.ObservationWrapper):
     env: The gym environment to be wrapped.
     size: The size of the buffer.
     dtype: The data type of the buffer.
+
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.143-144`
     """
 
     def __init__(self, env, size, dtype=np.float32):
@@ -152,6 +176,13 @@ class NormImage(gym.ObservationWrapper):
 
     Attributes:
     env: The gym environment to be wrapped.
+
+    Reference:
+        - Code adjusted from
+            `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
+            Apply Modern RL Methods to Practical Problems of Chatbots,
+            Robotics, Discrete Optimization, Web Automation, and More.
+            Packt Publishing Ltd. p.144`
     """
 
     def observation(self, obs):
@@ -185,27 +216,3 @@ def make_env(env_name, record=False, record_at_iter=10):
     env = Buffer(env, size=4)
     env = NormImage(env)
     return env
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument("--env", type=str, default="ALE/Pong-v5")
-#     parser.add_argument("--steps", type=int, default=100)
-#     args = parser.parse_args()
-
-#     env_name = args.env
-#     steps = args.steps
-
-#     env = make_env(env_name)
-#     obs, _ = env.reset()
-
-#     # Play n steps
-#     for i in range(steps):
-#         action = env.action_space.sample()
-#         next_obs, _, _, _, _ = env.step(action)
-
-#         # Grayscale Observation Human Eye
-#         cv2.imwrite(
-#             "screenshots/pong_{}.png".format(i),
-#             np.reshape(next_obs * 255.0, (-1, 84)),
-#         )
