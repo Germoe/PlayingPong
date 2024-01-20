@@ -1,6 +1,19 @@
-# Ignore runs / recordings of trainings
-runs/**
-recording/**
+# Ignore Image- and Movie-Data
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.eps
+*.pdf
+*.svg
+*.mp4
+*.meta.json
+
+# Ignore data files
+*.dat
+
+# Ignore TensorBoard logs
+*.tfevents*
 
 # Ignore .DS_Store files
 .DS_Store

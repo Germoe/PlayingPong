@@ -1,12 +1,13 @@
-import argparse
+import datetime
+import os
 
 import cv2
 import gymnasium as gym
 import gymnasium.wrappers as wrappers
 import numpy as np
 
-RECORD = False
-RECORD_AT_ITER = 1000
+RECORD = True
+RECORD_AT_ITER = 10
 
 
 class PreProcessingImage84(gym.ObservationWrapper):
@@ -157,14 +158,26 @@ class NormImage(gym.ObservationWrapper):
         return np.array(obs).astype(np.float32) / 255.0
 
 
-def make_env(env_name):
+def make_env(env_name, record=False, record_at_iter=10):
     env = gym.make(env_name, render_mode="rgb_array")
     env = wrappers.RecordEpisodeStatistics(
         env
     )  # Standard Wrapper to record episode statistics in info
-    if RECORD is True:
+    if record is True:
+        print(f"Record Videos: {record}, at every {record_at_iter}th episode")
+        # Create a folder to store the videos
+        path = "./videos/{}".format(
+            env_name.replace("/", "_")
+            + "_"
+            + str(datetime.datetime.now().strftime("%Y_%m_%d_%H_%M"))
+        )
+        if not os.path.exists(path):
+            os.makedirs(path)
         env = wrappers.RecordVideo(
-            env, directory="videos", episode_trigger=lambda x: x % RECORD_AT_ITER == 0
+            env,
+            path,
+            episode_trigger=lambda x: x % record_at_iter == 0,
+            disable_logger=True,
         )  # Standard Wrapper to record videos of episodes
     env = PreProcessingImage84(env)
     env = ActionRepeated(env)
@@ -174,25 +187,25 @@ def make_env(env_name):
     return env
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--env", type=str, default="ALE/Pong-v5")
-    parser.add_argument("--steps", type=int, default=100)
-    args = parser.parse_args()
+# if __name__ == "__main__":
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--env", type=str, default="ALE/Pong-v5")
+#     parser.add_argument("--steps", type=int, default=100)
+#     args = parser.parse_args()
 
-    env_name = args.env
-    steps = args.steps
+#     env_name = args.env
+#     steps = args.steps
 
-    env = make_env(env_name)
-    obs, _ = env.reset()
+#     env = make_env(env_name)
+#     obs, _ = env.reset()
 
-    # Play n steps
-    for i in range(steps):
-        action = env.action_space.sample()
-        next_obs, _, _, _, _ = env.step(action)
+#     # Play n steps
+#     for i in range(steps):
+#         action = env.action_space.sample()
+#         next_obs, _, _, _, _ = env.step(action)
 
-        # Grayscale Observation Human Eye
-        cv2.imwrite(
-            "screenshots/pong_{}.png".format(i),
-            np.reshape(next_obs * 255.0, (-1, 84)),
-        )
+#         # Grayscale Observation Human Eye
+#         cv2.imwrite(
+#             "screenshots/pong_{}.png".format(i),
+#             np.reshape(next_obs * 255.0, (-1, 84)),
+#         )
