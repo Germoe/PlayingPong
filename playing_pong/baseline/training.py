@@ -8,7 +8,7 @@ import pong_env
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from dqn_model import DQN
+from playing_pon.dqn_model import DQN
 from torch.utils.tensorboard import SummaryWriter
 
 ENV_NAME = "ALE/Pong-v5"

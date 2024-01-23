@@ -211,8 +211,8 @@ def make_env(env_name, record=False, record_at_iter=10):
             disable_logger=True,
         )  # Standard Wrapper to record videos of episodes
     env = PreProcessingImage84(env)
-    env = ActionRepeated(env)
+    env = ActionRepeated(env, repeat=3)
     env = ImageToCWH(env)
-    env = Buffer(env, size=4)
+    env = Buffer(env, size=3)
     env = NormImage(env)
     return env

@@ -2,7 +2,7 @@ import argparse
 import sys
 from collections import Counter
 
-import dqn_model
+import dqn_model as dqn_model
 import numpy as np
 import pong_env
 import torch
@@ -49,6 +49,8 @@ if __name__ == "__main__":
         while True:
             # Select Action
             obs_a = np.array([obs])
+
+            print(np.mean(obs_a), np.std(obs_a))
             obs_v = torch.tensor(obs_a, dtype=torch.float32)
             q_vals_v = net(obs_v)
             _, act_v = torch.max(q_vals_v, dim=1)
