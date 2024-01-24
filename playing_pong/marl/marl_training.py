@@ -46,10 +46,19 @@ class Agent:
         self.curr_reward = 0.0
 
     def epsilon(self):
-        return max(
-            self.epsilon_end,
-            self.epsilon_start - self._iter / self.epsilon_decay_last_frame,
-        )
+        """
+        Method to calculate the epsilon value for the current iteration.
+        It uses a linear decay function to calculate the epsilon value.
+
+        Args:
+            None
+
+        Returns:
+            The epsilon value for the current iteration.
+        """
+        return self.epsilon_start * (
+            1 - self._iter / self.epsilon_decay_last_frame
+        ) + self.epsilon_end * (self._iter / self.epsilon_decay_last_frame)
 
     def reset_reward(self):
         self.curr_reward = 0.0
