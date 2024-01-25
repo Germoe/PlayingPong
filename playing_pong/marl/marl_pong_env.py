@@ -15,7 +15,7 @@ from supersuit import (
     resize_v1,
 )
 
-MAX_CYCLES_PER_EPISODE = 10000
+MAX_CYCLES_PER_EPISODE = 100000
 
 
 class shift_channel(BaseWrapper):
@@ -166,52 +166,6 @@ class crop_wrapper(BaseWrapper):
         return obs[self.y1 : self.y2, self.x1 : self.x2]
 
 
-# class crop_wrapper_single(gym.ObservationWrapper):
-#     def __init__(self, env):
-#         super().__init__(env)
-#         self.observation_space = gym.spaces.Box(
-#             low=0, high=1, shape=(84, 84, 1), dtype=np.float32
-#         )
-
-#     @staticmethod
-#     def crop(obs, y1, y2, x1, x2):
-#         return obs[y1:y2, x1:x2]
-
-#     def observation(self, obs):
-#         return self.crop(obs, y1=18, y2=102, x1=0, x2=84)
-
-
-# class shift_channel_single(gym.ObservationWrapper):
-#     """
-#     This class is a wrapper for a gym environment, that converts the
-#     observation images from HWC to CWH format.
-
-#     Attributes:
-#     env: The gym environment to be wrapped.
-#     observation_space: The observation space of the gym environment.
-
-#     Reference:
-#         - Code adjusted from
-#             `Lapan, Maxim. 2020. Deep Reinforcement Learning Hands-On:
-#             Apply Modern RL Methods to Practical Problems of Chatbots,
-#             Robotics, Discrete Optimization, Web Automation, and More.
-#             Packt Publishing Ltd. p.144`
-#     """
-
-#     def __init__(self, env):
-#         super().__init__(env)
-#         old_space = self.observation_space
-#         self.observation_space = gym.spaces.Box(
-#             low=0.0,
-#             high=1.0,
-#             shape=(old_space.shape[-1], old_space.shape[0], old_space.shape[1]),
-#             dtype=np.float32,
-#         )
-
-#     def observation(self, obs):
-#         return np.moveaxis(obs, 2, 0)
-
-
 def make_env(record=False, max_cycles=MAX_CYCLES_PER_EPISODE):
     env = pong_v3.env(render_mode="rgb_array", max_cycles=max_cycles)
     env = color_reduction_v0(env, mode="R")
@@ -226,17 +180,3 @@ def make_env(record=False, max_cycles=MAX_CYCLES_PER_EPISODE):
     env = normalize_obs_v0(env, env_min=0, env_max=1)
 
     return env
-
-
-# def make_env_single():
-#     env = gym.make("PongNoFrameskip-v4", render_mode="rgb_array")
-#     env = color_reduction_v0(env, mode="R")
-#     env = dtype_v0(env, dtype=np.float32)
-#     env = resize_v1(env, x_size=84, y_size=110)
-#     env = crop_wrapper_single(env)
-#     env = frame_skip_v0(env, num_frames=3)
-#     env = frame_stack_v1(env, stack_size=3)
-#     env = shift_channel_single(env)
-#     env = normalize_obs_v0(env, env_min=0, env_max=1)
-
-#     return env

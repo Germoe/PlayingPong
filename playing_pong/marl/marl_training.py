@@ -3,11 +3,10 @@ import datetime
 import os
 import sys
 import time
+from itertools import cycle
 
 import marl_pong_env
 import numpy as np
-
-# Import ReplayBuffer
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,12 +14,14 @@ import torch.utils.tensorboard as tb
 from marl_dqn_model import DQN
 from torchrl.data import ListStorage, ReplayBuffer
 
-REPLAY_SIZE = 10000
+REPLAY_SIZE = 100000
 BATCH_SIZE = 32
 
 EPSILON_START = 1.0
-EPSILON_END = 0.1
-EPSILON_DECAY_LAST_FRAME = 100000
+EPSILON_END = 0.05
+EPSILON_DECAY_LAST_FRAME = 1000000
+
+STATIONARY_ITERATIONS = 500000
 
 LEARNING_RATE = 1e-4
 TARGET_NET_SYNC_RATE = 1000
@@ -56,9 +57,10 @@ class Agent:
         Returns:
             The epsilon value for the current iteration.
         """
-        return self.epsilon_start * (
-            1 - self._iter / self.epsilon_decay_last_frame
-        ) + self.epsilon_end * (self._iter / self.epsilon_decay_last_frame)
+        alpha = min(1, self._iter / self.epsilon_decay_last_frame)
+        return (
+            self.epsilon_start * (1 - alpha) + self.epsilon_end * alpha
+        )  # Linear decay
 
     def reset_reward(self):
         self.curr_reward = 0.0
@@ -118,16 +120,27 @@ class DQNAgent(Agent):
             action = self.env.action_space(self.agent_id).sample()
         else:
             # Determine Action using NN
-            state_a = np.array([obs], copy=False)
-            state_v = torch.tensor(state_a).to(self.device)
-            q_vals_v = self.net(state_v)
-            _, act_v = torch.max(q_vals_v, dim=1)
-            action = int(act_v.item())
+            _, action = self.q_max(obs)
 
-        # Save action for later retrieval
+        # Save action and observation for later retrieval
         self._action = action
         self._obs = obs
         return action
+
+    def q(self, obs) -> torch.Tensor:
+        """
+        Predict the Q values for the given observations
+        """
+        state_a = np.array([obs], copy=False)
+        state_v = torch.tensor(state_a).to(self.device)
+        return self.net(state_v)
+
+    def q_max(self, obs) -> tuple[float, float]:
+        """
+        Predict the Q values for the given observations
+        """
+        q_max_val, q_max_idx = torch.max(self.q(obs), dim=1)
+        return q_max_val.item(), q_max_idx.item()
 
     def add_exp(self, obs, action, reward, terminated, truncated, next_obs):
         self.exp_buffer.add((obs, action, reward, terminated, truncated, next_obs))
@@ -251,15 +264,39 @@ def convert_to_tensor(input, dtype=torch.float32):
 
 
 class MARL_DQN_Algorithm:
+    """
+    The MARL_DQN_Algorithm class is the main algorithm class for the
+    multi-agent reinforcement learning algorithm.
+
+    Input:
+        env: The environment to be used for the algorithm.
+        agents: A dictionary of agents to be used for the algorithm.
+        stationary: An integer indicating the number of frames the
+            the other agent is stationary for.
+    Attributes:
+        env: The environment to be used for the algorithm.
+        agents: A dictionary of agents to be used for the algorithm.
+        train_agents: A dictionary of agents to be trained.
+
+    """
+
     def __init__(self, env, agents):
         self.env = env
         self.agents = agents
-        self.train_agents = {a_id: True for a_id in self.agents}
+        self.frame = 0
         self._reset()
 
     def _reset(self):
         self.env.reset()
         self.agent_iter = iter(self.env.agent_iter())
+
+    def next_agent(self):
+        try:
+            a_id = next(self.agent_iter)
+            return a_id
+        except StopIteration:
+            self._reset()
+            return None
 
     def step(self):
         """
@@ -275,16 +312,13 @@ class MARL_DQN_Algorithm:
             a_id = next(self.agent_iter)
         except StopIteration:
             self._reset()
-            return None
+            return None, None
 
         next_obs, reward, terminated, truncated, _ = self.env.last()
 
+        # Receive Reward the active agent has received since last action
         active_a = self.agents[a_id]
         active_a.update_reward(reward)
-
-        if a_id is not None:
-            if self.train_agents[a_id]:
-                self.update_agent(a_id, reward, next_obs, terminated, truncated)
 
         if terminated or truncated:
             active_a.append_reward(active_a.curr_reward)
@@ -294,11 +328,17 @@ class MARL_DQN_Algorithm:
             action = active_a.select_action(next_obs)
 
         self.env.step(action)
+        self.frame += 1
 
-        return a_id
+        return a_id, (next_obs, reward, terminated, truncated, _)
 
-    def set_train_agents(self, train_agents):
-        self.train_agents = train_agents
+
+class MARL_Train(MARL_DQN_Algorithm):
+    def __init__(self, env, agents, stationary=STATIONARY_ITERATIONS):
+        super().__init__(env, agents)
+        self.stationary = stationary
+        self.agent_rotation = cycle(self.env.possible_agents)
+        self.active_agent = None
 
     def update_agent(self, agent_id, reward, next_obs, terminated, truncated):
         active_a = self.agents[agent_id]
@@ -313,6 +353,30 @@ class MARL_DQN_Algorithm:
                 next_obs,
             )
             active_a.update()
+
+    def switch_active_agent(self):
+        self.active_agent = next(self.agent_rotation)
+
+    def train_step(self):
+        """
+        This method extends the step method of the MARL_DQN_Algorithm class
+        by adding the training step for the active agent.
+        """
+
+        a_id, exp = self.step()
+        if a_id is None or exp is None:
+            return None
+
+        next_obs, reward, terminated, truncated, _ = exp
+
+        if self.active_agent == a_id:
+            self.update_agent(a_id, reward, next_obs, terminated, truncated)
+
+        if self.frame % self.stationary == 0:
+            self.switch_active_agent()
+            print(f"Active agent: {self.active_agent}")
+
+        return a_id
 
 
 if __name__ == "__main__":
@@ -372,7 +436,7 @@ if __name__ == "__main__":
 
     n_agents = len(agents)
 
-    marl = MARL_DQN_Algorithm(env, agents)
+    marl = MARL_Train(env, agents, stationary=STATIONARY_ITERATIONS)
     iteration = 0
     episodes = 0
     episode_last_iter_n = 0
@@ -385,12 +449,10 @@ if __name__ == "__main__":
     writer = tb.SummaryWriter(comment="-pong-marl")
 
     while True:
-        iteration += 1
-        speed = (iteration - last_iteration) / (time.time() - ts_time)
-        last_iteration = iteration
         ts_time = time.time()
+        last_iteration = iteration
 
-        a_id = marl.step()
+        a_id = marl.train_step()
         if a_id is None:
             episodes += 1
             # Marks the end of an episode
@@ -427,62 +489,24 @@ if __name__ == "__main__":
             mean_rewards = [f"{mean_reward_100[a_id]:.2f}" for a_id in a_ids]
             mean_rewards_10 = [f"{mean_reward_10[a_id]:.2f}" for a_id in a_ids]
 
-            # If the mean reward is overpowering, stop training for that agent
-            for a_id in a_ids:
-                if marl.agents[a_id].epsilon() == EPSILON_END:
-                    if mean_reward_100[a_id] is not None:
-                        if (
-                            mean_reward_100[a_id] > 10
-                            and marl.train_agents[a_id] is True
-                        ):
-                            print(
-                                f"Stopping training for agent {a_id}, "
-                                "others continue/restart"
-                            )
-                            # Update marl.train_agents dict (set other agents to True)
-                            new_train_agents = {a_id: True for a_id in a_ids}
-                            new_train_agents[a_id] = False
-                            marl.set_train_agents(new_train_agents)
-                        if (
-                            mean_reward_100[a_id] < -5
-                            and marl.train_agents[a_id] is False
-                        ):
-                            print(
-                                f"Restarting training for agent {a_id}, others continue"
-                            )
-                            new_train_agents = marl.train_agents
-                            new_train_agents[a_id] = True
-                            marl.set_train_agents(new_train_agents)
-
             epsilons = [f"{marl.agents[a_id].epsilon():.3f}" for a_id in a_ids]
             sys.stdout.write(
                 f"\rEpisodes: {episodes} | "
                 f"Iterations (last): {iteration - episode_last_iter_n} | "
                 f"Rw. 100: {mean_rewards} | "
                 f"Rw. 10: {mean_rewards_10} | "
-                f" {speed:.2f} iter/s | "
-                f"Eps: {epsilons}   "
+                f"Eps: {epsilons}"
             )
-
             writer.add_scalar(
                 "episode_iterations", iteration - episode_last_iter_n, episodes
             )
 
             episode_last_iter_n = iteration
 
-        if iteration % 100 == 0:
-            obs, _, _, _, _ = marl.env.last()
+        # Compute speed f/s
+        iteration += 1
+        speed = (iteration - last_iteration) / (time.time() - ts_time)
 
-            writer.add_image(
-                f"screen/agent-{a_id}",
-                obs.astype(np.float32),
-                iteration / n_agents,
-                dataformats="CHW",
-            )
-
-        writer.add_scalar(
-            f"epsilon/{a_id}", agents[a_id].epsilon(), iteration / n_agents
-        )
-        writer.add_scalar(f"speed/{a_id}", speed, iteration / n_agents)
-
-        writer.add_scalar(f"loss/{a_id}", agents[a_id]._loss, iteration / n_agents)
+        writer.add_scalar(f"epsilon/{a_id}", agents[a_id].epsilon(), iteration)
+        writer.add_scalar(f"speed/{a_id}", speed, iteration)
+        writer.add_scalar(f"loss/{a_id}", agents[a_id]._loss, iteration)
