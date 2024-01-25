@@ -1,27 +1,24 @@
 import argparse
 import os
 import random
+import sys
 from datetime import datetime
 
 import marl_pong_env
 import torch
-from marl_training import DQNAgent
+from marl_agent import DQNAgent
 
 TEST_SIZE = 1000
 
 
 class MARL_Testing:
-    def __init__(self, env, test_size=TEST_SIZE):
+    def __init__(self, env, device, test_size=TEST_SIZE):
         self.env = env
         self.frame = 0
         self.test_size = test_size
+        self.device = device
         self.sampling_rate = 0.01
-        print(
-            f"Expected number of frames required: "
-            f"{self.test_size / self.sampling_rate} frames"
-        )
-
-        self.test_set = torch.empty((0, 3, 84, 84))
+        self.test_set = torch.empty((0, 3, 84, 84)).to(self.device)
 
         self._reset()
 
@@ -29,6 +26,11 @@ class MARL_Testing:
         """
         Tensor of observations for the test set. Use a torch
         """
+        print(
+            f"Expected number of frames required for sampling: "
+            f"{int(self.test_size / self.sampling_rate)} frames"
+        )
+
         while True:
             obs, _, _, _, _ = self.env.last()
             if random.random() < self.sampling_rate:
@@ -37,6 +39,12 @@ class MARL_Testing:
 
             if len(self.test_set) >= self.test_size:
                 break
+
+            if self.frame % 5000 == 0:
+                sys.stdout.write(
+                    f"\rNumber of frames sampled: {len(self.test_set)}/{self.test_size}"
+                )
+                sys.stdout.flush()
             self.random_step()
 
     def _reset(self):
@@ -67,14 +75,17 @@ class MARL_Testing:
 
         return a_id
 
-    def save(self, path):
-        dir = "/".join(path.split("/")[:-1])
+    def save(self, dir):
         if not os.path.exists(dir):
             os.makedirs(dir)
-        torch.save(self.test_set, path)
+        torch.save(
+            self.test_set,
+            f"{dir}/test_set_{datetime.now().isoformat()[:-7].replace(':','_')}.pt",
+        )
+        return f"{dir}/test_set_{datetime.now().isoformat()[:-7].replace(':','_')}.pt"
 
     def load(self, path):
-        self.test_set = torch.load(path)
+        self.test_set = torch.load(path).to(self.device)
         print(f"Loaded test set from {path}")
         print(f"Test set size: {self.test_set.shape}")
 
@@ -115,7 +126,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device: ", device)
 
-    MARL_test = MARL_Testing(env)
+    MARL_test = MARL_Testing(env, device=device)
 
     if args.init is True:
         MARL_test.init_test_set()
