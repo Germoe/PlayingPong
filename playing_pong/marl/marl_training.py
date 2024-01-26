@@ -14,10 +14,10 @@ from marl_test import MARL_Testing
 
 EPSILON_START = 1.0
 EPSILON_END = 0.05
-EPSILON_DECAY_LAST_FRAME = 1000000
+EPSILON_DECAY_LAST_FRAME = 100000
 EPOCH_SIZE = 250000
 
-STATIONARY_ITERATIONS = 250000
+STATIONARY_ITERATIONS = 10000
 
 
 class MARL_DQN_Algorithm:
@@ -93,7 +93,7 @@ class MARL_DQN_Algorithm:
 class MARL_Train(MARL_DQN_Algorithm):
     def __init__(self, env, agents, stationary=STATIONARY_ITERATIONS):
         super().__init__(env, agents)
-        self.stationary = stationary
+        self.stationary = stationary * len(agents)
         self.agent_rotation = cycle(self.env.possible_agents)
         self.active_agent = next(self.agent_rotation)
         print(f"Active agent: {self.active_agent}")
@@ -175,17 +175,24 @@ if __name__ == "__main__":
         type=str,
         help="Load test set from file",
     )
+    parser.add_argument(
+        "--record",
+        default=False,
+        action="store_true",
+        help="Record every kth video of training",
+    )
 
     args = parser.parse_args()
     epsilon_start, epsilon_end, epsilon_decay_last_frame = args.epsilon
     print("Epsilon: ", epsilon_start, epsilon_end, epsilon_decay_last_frame)
     agents_to_load = {0: args.agent0, 1: args.agent1}
-    env = marl_pong_env.make_env(record=False)
+    env = marl_pong_env.make_env(record=args.record)
     device = torch.device("cuda" if args.cuda else "cpu")
 
     run_name = f"pong-marl-{datetime.datetime.now().isoformat()}".replace(":", "_")
     print("Using device: ", device)
     print(f"Epoch Size: {EPOCH_SIZE}")
+    print(f"Stationary Iterations: {STATIONARY_ITERATIONS}")
 
     agents = {}
     for i, agent_id in enumerate(env.possible_agents):
@@ -199,8 +206,11 @@ if __name__ == "__main__":
             load=agents_to_load[i],
         )
 
+        print(f"Replay Buffer Size: {agents[agent_id].replay_size}")
+
     marl = MARL_Train(env, agents, stationary=STATIONARY_ITERATIONS)
-    marl_test = MARL_Testing(env, device=device)
+    obs_space_dims = env.observation_space(env.possible_agents[0]).shape
+    marl_test = MARL_Testing(env, dimensions=obs_space_dims, device=device)
     if args.test is False:
         marl_test.init_test_set()
         marl_test.save(dir="tests")
@@ -282,6 +292,7 @@ if __name__ == "__main__":
         iteration = marl.frame / n_agents
         speed = (iteration - last_iteration) / (time.time() - ts_time)
 
-        writer.add_scalar(f"epsilon/{a_id}", agents[a_id].epsilon(), iteration)
-        writer.add_scalar(f"speed/{a_id}", speed, iteration)
-        writer.add_scalar(f"loss/{a_id}", agents[a_id]._loss, iteration)
+        if int(iteration) % 100 == 0:
+            writer.add_scalar(f"epsilon/{a_id}", agents[a_id].epsilon(), iteration)
+            writer.add_scalar(f"speed/{a_id}", speed, iteration)
+            writer.add_scalar(f"loss/{a_id}", agents[a_id]._loss, iteration)

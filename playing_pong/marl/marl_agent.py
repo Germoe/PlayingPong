@@ -5,7 +5,7 @@ import torch.optim as optim
 from marl_dqn_model import DQN
 from torchrl.data import ListStorage, ReplayBuffer
 
-REPLAY_SIZE = 50000
+REPLAY_SIZE = 10000
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-4
 TARGET_NET_SYNC_RATE = 1000
@@ -16,10 +16,6 @@ GAMMA = 0.99
 class Agent:
     def __init__(self, agent_id, epsilon_start, epsilon_end, epsilon_decay_last_frame):
         self.agent_id = agent_id
-        self.replay_size = REPLAY_SIZE
-        self.exp_buffer = ReplayBuffer(
-            storage=ListStorage(max_size=self.replay_size), batch_size=BATCH_SIZE
-        )
         self.epsilon_start = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay_last_frame = epsilon_decay_last_frame
@@ -91,8 +87,13 @@ class DQNAgent(Agent):
         self.optimizer = optim.Adam(self.net.parameters(), lr=LEARNING_RATE)
         self._tgt_net_sync_rate = TARGET_NET_SYNC_RATE
 
-    def convert_to_tensor(self, input, dtype=torch.float32):
-        return torch.as_tensor(input, dtype=dtype, device=self.device)
+        self.replay_size = REPLAY_SIZE
+        self.exp_buffer = ReplayBuffer(
+            storage=ListStorage(max_size=self.replay_size), batch_size=BATCH_SIZE
+        )
+
+    def convert_to_tensor(self, input, device, dtype=torch.float32):
+        return torch.as_tensor(input, dtype=dtype, device=device)
 
     @torch.no_grad()
     def select_action(self, obs):
@@ -142,13 +143,16 @@ class DQNAgent(Agent):
             truncations,
             next_obs,
         ) = self.exp_buffer.sample()
-
-        obs_v = self.convert_to_tensor(obs, dtype=torch.float32)
-        actions_v = self.convert_to_tensor(actions, dtype=torch.int64)
-        rewards_v = self.convert_to_tensor(rewards, dtype=torch.float32)
-        terminations_v = self.convert_to_tensor(terminations, dtype=torch.bool)
-        truncations_v = self.convert_to_tensor(truncations, dtype=torch.bool)
-        next_obs_v = self.convert_to_tensor(next_obs, dtype=torch.float32)
+        obs_v = self.convert_to_tensor(obs, self.device, dtype=torch.float32)
+        actions_v = self.convert_to_tensor(actions, self.device, dtype=torch.int64)
+        rewards_v = self.convert_to_tensor(rewards, self.device, dtype=torch.float32)
+        terminations_v = self.convert_to_tensor(
+            terminations, self.device, dtype=torch.bool
+        )
+        truncations_v = self.convert_to_tensor(
+            truncations, self.device, dtype=torch.bool
+        )
+        next_obs_v = self.convert_to_tensor(next_obs, self.device, dtype=torch.float32)
 
         return (
             obs_v,

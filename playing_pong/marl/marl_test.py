@@ -12,13 +12,13 @@ TEST_SIZE = 1000
 
 
 class MARL_Testing:
-    def __init__(self, env, device, test_size=TEST_SIZE):
+    def __init__(self, env, device, dimensions, test_size=TEST_SIZE):
         self.env = env
         self.frame = 0
         self.test_size = test_size
         self.device = device
         self.sampling_rate = 0.01
-        self.test_set = torch.empty((0, 3, 84, 84)).to(self.device)
+        self.test_set = torch.empty((0, *dimensions), device=device)
 
         self._reset()
 
@@ -34,7 +34,7 @@ class MARL_Testing:
         while True:
             obs, _, _, _, _ = self.env.last()
             if random.random() < self.sampling_rate:
-                obs_v = torch.tensor(obs, dtype=torch.float32)
+                obs_v = torch.tensor(obs, dtype=torch.float32, device=self.device)
                 self.test_set = torch.cat((self.test_set, obs_v.unsqueeze(0)))
 
             if len(self.test_set) >= self.test_size:
@@ -125,8 +125,13 @@ if __name__ == "__main__":
     env = marl_pong_env.make_env()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Using device: ", device)
+    print("Observation space: ", env.observation_space(env.possible_agents[0]).shape)
 
-    MARL_test = MARL_Testing(env, device=device)
+    MARL_test = MARL_Testing(
+        env,
+        dimensions=env.observation_space(env.possible_agents[0]).shape,
+        device=device,
+    )
 
     if args.init is True:
         MARL_test.init_test_set()

@@ -16,6 +16,7 @@ from supersuit import (
 )
 
 MAX_CYCLES_PER_EPISODE = 100000
+RECORD_EVERY = 10
 
 
 class shift_channel(BaseWrapper):
@@ -166,7 +167,9 @@ class crop_wrapper(BaseWrapper):
         return obs[self.y1 : self.y2, self.x1 : self.x2]
 
 
-def make_env(record=False, max_cycles=MAX_CYCLES_PER_EPISODE):
+def make_env(
+    record=False, record_every=RECORD_EVERY, max_cycles=MAX_CYCLES_PER_EPISODE
+):
     env = pong_v3.env(render_mode="rgb_array", max_cycles=max_cycles)
     env = color_reduction_v0(env, mode="R")
     env = dtype_v0(env, dtype=np.float32)
@@ -174,7 +177,7 @@ def make_env(record=False, max_cycles=MAX_CYCLES_PER_EPISODE):
     env = crop_wrapper(env, y1=18, y2=102, x1=0, x2=84)
     env = frame_skip_v0(env, num_frames=3)
     if record is True:
-        env = video_wrapper(env, every=10, path="videos")
+        env = video_wrapper(env, every=record_every, path="videos")
     env = frame_stack_v1(env, stack_size=3)
     env = shift_channel(env)
     env = normalize_obs_v0(env, env_min=0, env_max=1)
